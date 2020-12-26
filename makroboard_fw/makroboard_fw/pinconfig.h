@@ -50,3 +50,6 @@
 #define SW7 HW_SW8
 
 #define CRYSTAL 16000000L
+// makros to toggle leds easier..
+#define off 0
+#define on 1
