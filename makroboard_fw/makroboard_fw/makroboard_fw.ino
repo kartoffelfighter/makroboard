@@ -53,6 +53,11 @@ bool KEY_LIB[8] = {KEY_1_CONSUMER, KEY_2_CONSUMER, KEY_3_CONSUMER, KEY_4_CONSUME
 #include <FastLED.h>
 CRGB leds[NUM_LEDS];
 
+int debounce[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+long last_debounce_millis = 0;
+long last_loop_time = 0;
+long begin_time_loop = 0; // store the loop begin time to prevent the arduino from 'running-to-fast-hiccup'
+
 void setup() {
 
   pinMode(SW0, INPUT);
@@ -82,17 +87,155 @@ void setup() {
 }
 
 int leds_enabled[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+#define ANIMATION_DELAY 50
+
+void animationPlayPause() {
+  leds[4] = CRGB::Blue;
+  leds[5] = CRGB::Green;
+  leds[6] = CRGB::Blue;
+  leds[7] = CRGB::Blue;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Black;
+  leds[5] = CRGB::Black;
+  leds[6] = CRGB::Black;
+  leds[7] = CRGB::Black;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Blue;
+  leds[5] = CRGB::Green;
+  leds[6] = CRGB::Blue;
+  leds[7] = CRGB::Blue;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Black;
+  leds[5] = CRGB::Green;
+  leds[6] = CRGB::Black;
+  leds[7] = CRGB::Red;
+  FastLED.show();
+}
+
+void animationStop() {
+  leds[4] = CRGB::Red;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Red;
+  leds[5] = CRGB::Red;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Red;
+  leds[5] = CRGB::Red;
+  leds[6] = CRGB::Red;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Red;
+  leds[5] = CRGB::Red;
+  leds[6] = CRGB::Red;
+  leds[7] = CRGB::Red;
+  FastLED.show();
+  delay(20);
+  leds[4] = CRGB::Black;
+  leds[5] = CRGB::Black;
+  leds[6] = CRGB::Black;
+  leds[7] = CRGB::Red;
+  FastLED.show();
+}
+
+void animationNext() {
+  leds[4] = CRGB::Purple;
+  leds[5] = CRGB::Green;
+  leds[6] = CRGB::Green;
+  leds[7] = CRGB::Green;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Green;
+  leds[5] = CRGB::Purple;
+  leds[6] = CRGB::Green;
+  leds[7] = CRGB::Green;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Green;
+  leds[5] = CRGB::Green;
+  leds[6] = CRGB::Purple;
+  leds[7] = CRGB::Green;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Green;
+  leds[5] = CRGB::Green;
+  leds[6] = CRGB::Green;
+  leds[7] = CRGB::Purple;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Black;
+  leds[5] = CRGB::Green;
+  leds[6] = CRGB::Black;
+  leds[7] = CRGB::Red;
+  FastLED.show();
+}
+
+void animationPrevious() {
+  leds[4] = CRGB::Green;
+  leds[5] = CRGB::Green;
+  leds[6] = CRGB::Green;
+  leds[7] = CRGB::Purple;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Green;
+  leds[5] = CRGB::Green;
+  leds[6] = CRGB::Purple;
+  leds[7] = CRGB::Green;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Green;
+  leds[5] = CRGB::Purple;
+  leds[6] = CRGB::Green;
+  leds[7] = CRGB::Green;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Purple;
+  leds[5] = CRGB::Green;
+  leds[6] = CRGB::Green;
+  leds[7] = CRGB::Green;
+  FastLED.show();
+  delay(ANIMATION_DELAY);
+  leds[4] = CRGB::Black;
+  leds[5] = CRGB::Green;
+  leds[6] = CRGB::Black;
+  leds[7] = CRGB::Red;
+  FastLED.show();
+}
+
+void ledShow(byte key) {
+  switch (key) {
+    case 4:
+      animationPrevious();
+      break;
+    case 5:
+      animationPlayPause();
+      break;
+    case 6:
+      animationNext();
+      break;
+    case 7:
+      animationStop();
+      break;
+  }
+}
 
 void toggleLed(int key, bool self, int state = -1) {
-  if (leds_enabled[key]) {
-    if (state != on) {
-      leds[key] = CRGB::Black;
-      leds_enabled[key] = 0;
-    }
+  if (KEY_LIB[key]) {
+    ledShow(key);
   } else {
-    if (state != off) {
-      leds[key] = self ? CRGB::Blue : CRGB::Red;
-      leds_enabled[key] = 1;
+    if (leds_enabled[key]) {
+      if (state != on) {
+        leds[key] = CRGB::Black;
+        leds_enabled[key] = 0;
+      }
+    } else {
+      if (state != off) {
+        leds[key] = self ? CRGB::Blue : CRGB::Red;
+        leds_enabled[key] = 1;
+      }
     }
   }
 }
@@ -111,11 +254,6 @@ void KeyPress(int key) {
 
 }
 
-
-int debounce[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-long last_debounce_millis = 0;
-long last_loop_time = 0;
-long begin_time_loop = 0; // store the loop begin time to prevent the arduino from 'running-to-fast-hiccup'
 
 void loop() {
   begin_time_loop = millis();
@@ -144,5 +282,5 @@ void loop() {
     }
   }
   if (millis() - begin_time_loop > MIN_LOOP_TIME)
-    delay(MIN_LOOP_TIME - (millis() - begin_time_loop));
+    delay(MIN_LOOP_TIME);
 }
